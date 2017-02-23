@@ -4,30 +4,36 @@ import java.util.regex.*;
 
 /*
 Holds moves.
+
+TODO HORIZONTAL NEEDS TO KNOW NEXT LINE. MAYBE JUST READ FROM ARRAY.
 */
 
-class PossibleMove{
+class PossibleMove implements Comparable<PossibleMove>{
 
     int x;
     int y;
+    boolean scoreCalculated = false;
     int score;
     Color[][] board;
 
-    //private HashSet<String> runs = new HashSet<String>();
+    final static int open3 = 2;
+    final static int sideopen4 = 4;
+    final static int open4 = 50;
+    final static int win = 200;
 
-    Pattern[] wOpen3 = {Pattern.compile("-WWW-"),
+    static Pattern[] wOpen3 = {Pattern.compile("-WWW-"),
                         Pattern.compile("-(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}-"),
                         Pattern.compile("-(W|B|-){8}W(W|B|-){8}W(W|B|-){8}W(W|B|-){8}-"),
                         Pattern.compile("-(W|B|-){6}W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}-")
                        };
 
-    Pattern[] bOpen3 = {Pattern.compile("-BBB-"),
+    static Pattern[] bOpen3 = {Pattern.compile("-BBB-"),
                         Pattern.compile("-(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}-"),
                         Pattern.compile("-(W|B|-){8}B(W|B|-){8}B(W|B|-){8}B(W|B|-){8}-"),
                         Pattern.compile("-(W|B|-){6}B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}-")
                        };
 
-    Pattern[] wSideOpen4 = {Pattern.compile("-WWWW"),
+    static Pattern[] wSideOpen4 = {Pattern.compile("-WWWW"),
                             Pattern.compile("WWWW-"),
                             Pattern.compile("-(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W"),
                             Pattern.compile("W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}-"),
@@ -37,7 +43,7 @@ class PossibleMove{
                             Pattern.compile("W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}-"),
                         };
 
-    Pattern[] bSideOpen4 = {Pattern.compile("-BBBB"),
+    static Pattern[] bSideOpen4 = {Pattern.compile("-BBBB"),
                             Pattern.compile("BBBB-"),
                             Pattern.compile("-(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B"),
                             Pattern.compile("B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}-"),
@@ -47,22 +53,28 @@ class PossibleMove{
                             Pattern.compile("B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}-"),
                         };
 
-    Pattern[] wOpen4 = {Pattern.compile("-WWWW-"),
+    static Pattern[] wOpen4 = {Pattern.compile("-WWWW-"),
                         Pattern.compile("-(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}-"),
                         Pattern.compile("-(W|B|-){8}W(W|B|-){8}W(W|B|-){8}W(W|B|-){8}W(W|B|-){8}-"), 
                         Pattern.compile("-(W|B|-){6}W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}-")
                     };
+
+    static Pattern[] bOpen4 = {Pattern.compile("-BBBB-"),
+                        Pattern.compile("-(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}-"),
+                        Pattern.compile("-(W|B|-){8}B(W|B|-){8}B(W|B|-){8}B(W|B|-){8}B(W|B|-){8}-"), 
+                        Pattern.compile("-(W|B|-){6}B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}-")
+                    };
                     
-    Pattern[] wwin = {Pattern.compile("WWWWW"),
+    static Pattern[] wwin = {Pattern.compile("WWWWW"),
                       Pattern.compile("W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W(W|B|-){7}W"),
                       Pattern.compile("W(W|B|-){8}W(W|B|-){8}W(W|B|-){8}W(W|B|-){8}W"),
                       Pattern.compile("W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}W(W|B|-){6}W"),
                     };
-                    
-    final int open3 = 2;
-    final int sideopen4 = 4;
-    final int open4 = 50;
-    final int win = 200;
+    static Pattern[] bwin = {Pattern.compile("BBBBB"),
+                      Pattern.compile("B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B(W|B|-){7}B"),
+                      Pattern.compile("B(W|B|-){8}B(W|B|-){8}B(W|B|-){8}B(W|B|-){8}B"),
+                      Pattern.compile("B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}B(W|B|-){6}B"),
+                    };
 
     public PossibleMove(Color[][] board, int x, int y, Color me){
         this.x = x;
@@ -71,22 +83,29 @@ class PossibleMove{
         this.board = board;
     }
 
+    @Override
+    public int compareTo(PossibleMove otherMove){
+        if(this.score()<otherMove.score())
+            return -1;
+        if(this.score()==otherMove.score())
+            return 0;
+        else
+            return 1;
+    }
+
     
     public int score(){
         /*
-            +1 for every white stone adjascent to another white stone
-            -1 for every black stone adjascent ot another black stone
-
-            Loops over board and looks at next stone below, diaganol below and right.
-
             NEED TO IMPROVE
                 search for open 3's, 4's and one side open 3's, 4's and winning positions
                 either use string and regex or use boolean array.
                     convert matrix to string --WW----BB and use regex
         */
+        if(scoreCalculated){
+            return this.score;
+        }
+        scoreCalculated=true;
         int score = 0;
-        //score+=singleDigit();
-        //score+=runs();
         score = regex();
         this.score = score;
         return score;
@@ -95,16 +114,61 @@ class PossibleMove{
     private int regex(){
         int score = 0;
         String state = boardToString();
-        System.out.println(state);
 
         for(Pattern pattern : wOpen3){
             Matcher matcher = pattern.matcher(state);
             while(matcher.find()){
-                System.out.println("here");
                 score+=open3;
             } 
         }
-        
+        for(Pattern pattern : bOpen3){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score-=open3;
+            } 
+        }
+
+        for(Pattern pattern : wSideOpen4){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score+=sideopen4;
+            } 
+        }
+        for(Pattern pattern : bSideOpen4){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score-=sideopen4;
+            } 
+        }
+
+
+        for(Pattern pattern : wOpen4){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score+=open4;
+            } 
+        }
+        for(Pattern pattern : bOpen4){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score-=open4;
+            } 
+        }
+
+        for(Pattern pattern : wwin){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score+=win;
+            } 
+        }
+        for(Pattern pattern : bwin){
+            Matcher matcher = pattern.matcher(state);
+            while(matcher.find()){
+                score-=win;
+            } 
+        }
+
+
         return score;
 
     }
@@ -113,22 +177,25 @@ class PossibleMove{
         final Color black = new Color(0,0,0);
         final Color white = new Color(255,255,255);
         final int boardsize = board[0].length;
+        String[] chars = new String[91];
         String string = "";
 
+        int pos = 0;
         for(int i=0; i<boardsize; i++){
             for(int j=0; j<boardsize; j++){
                 if(board[i][j]==null){
-                    string = string + "-";
+                    chars[pos] = "-";
                 }
                 else if(board[i][j].equals(black)){
-                    string = string + "B";
+                    chars[pos] = "B";
                 }
                 else{
-                    string = string + "W";
+                    chars[pos] = "W";
                 }
+                pos++;
             }
         }
-        return string;
+        return String.join("",chars);
     }
 
     private int runs(){
@@ -145,8 +212,6 @@ class PossibleMove{
         final Color white = new Color(255,255,255);
         
         final int boardsize = board[0].length;
-
-
 
         int score = 0;
         for(int i=0; i<boardsize; i++){
@@ -185,7 +250,7 @@ class PossibleMove{
         return score;
     }
 
-    private int singleDigit(){
+    public int singleDigit(){
         int boardsize = board[0].length;
         int score = 0;
 
