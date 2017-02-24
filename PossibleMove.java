@@ -12,6 +12,7 @@ class PossibleMove{
     boolean scoreCalculated = false;
     int score;
     Color[][] board;
+    boolean terminal=false;
 
     int whiteFactor;
     int blackFactor;
@@ -23,9 +24,9 @@ class PossibleMove{
     final static int maxVal = Integer.MIN_VALUE;
 
     final static int open2 = 1;
-    final static int sideopen3 = 10;
-    final static int open3 = 100;
-    final static int sideopen4 = 1000;
+    final static int sideopen3 = 5;
+    final static int open3 = 25;
+    final static int sideopen4 = 125;
     // final static int open4 = 1000;
     // final static int win = 400;
 
@@ -68,6 +69,14 @@ class PossibleMove{
         score = regex(whiteFactor, blackFactor);
         this.score = score;
         return score;
+    }
+
+    public boolean isTerminal(){
+        return terminal;
+    }
+
+    public void setTerminal(){
+        terminal = true;
     }
 
     private int regex(int w, int b){

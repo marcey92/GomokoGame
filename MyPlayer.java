@@ -221,47 +221,57 @@ class MyPlayer extends GomokuPlayer {
     }
 
     private PossibleMove alphaBetaIterative(Color[][] board, Color me){
-        int depth = 2;
-        PossibleMove bestMove = new PossibleMove(copyMatrix(board),0,0,me);
+        int depth = 0;
+        ScoreMove bestMove = new ScoreMove(null,0);
         startTime = System.nanoTime();
         long estimatedTime = 0;
+        if(me==white)
+            bestMove.score = Integer.MIN_VALUE;
+        else if(me==black)
+            bestMove.score = Integer.MAX_VALUE;
+        ScoreMove move;
         while(estimatedTime < 9500){
-            bestMove = alphaBeta(board,me,depth);
-            depth++;
+            move = alphaBeta(board,me,depth);
+            if(me == Color.WHITE){
+                if(move.score>bestMove.score)
+                    bestMove.Set(move.move,move.score);
+            }
+            else{
+                if(move.score<bestMove.score){
+                    bestMove.Set(move.move,move.score);
+                }
+            }
             depth++;
             estimatedTime = (System.nanoTime() - startTime) / 1000000;
         }
         System.out.println("depth:"+depth);
-        return bestMove;
+        return bestMove.move;
     }
-    private PossibleMove alphaBeta(Color[][] board, Color me, int n){
+    private ScoreMove alphaBeta(Color[][] board, Color me, int n){
         PossibleMove[] moves = getOrderedMoves(board, me); 
-        PossibleMove posMove = moves[0];
-        PossibleMove negMove = moves[0];
-
-        int posScore = Integer.MIN_VALUE;
-        int negScore = Integer.MAX_VALUE;
+        ScoreMove posScore = new ScoreMove(moves[0],Integer.MIN_VALUE);
+        ScoreMove negScore = new ScoreMove(moves[0],Integer.MAX_VALUE);
+        
         for(PossibleMove move:moves){
             if(me.equals(white)){
                 int score = maxValue(move, me, n, Integer.MIN_VALUE, Integer.MAX_VALUE);
-                if(score>posScore){
-                    posScore = score;
-                    posMove = move;
+                if(score>posScore.score){
+                    posScore.score = score;
+                    posScore.move = move;
                 }
             }
             else{
                 int score = minValue(move, me, n, Integer.MIN_VALUE, Integer.MAX_VALUE);
-                if(score<negScore){
-                    negScore = score;
-                    negMove = move;
+                if(score<negScore.score){
+                    negScore.score = score;
+                    negScore.move = move;
                 }
             }
         }
         if(me.equals(white))
-            return posMove;
+            return posScore;
         else
-            return negMove;
-    
+            return negScore;
     }
 
     private int maxValue(PossibleMove move, Color peble, int n, int alpha, int beta){
@@ -269,20 +279,28 @@ class MyPlayer extends GomokuPlayer {
         if(estimatedTime > 9500){
             return move.score(whiteFactor,blackFactor);
         }
-        int tState = isTerminalState(move);
-        if(tState == -2)
+        int tState = isTerminalState(move,peble);
+        if(tState == -2){
+            move.setTerminal();
             return Integer.MIN_VALUE;
-        else if(tState == +2)
+        }
+        else if(tState == +2){
+            move.setTerminal();
             return Integer.MAX_VALUE;
-        else if(tState == -1)
-            return -100000;
-        else if(tState == +1)
-            return +100000;
+        }
+        else if(tState == -1){
+            move.setTerminal();
+            return -1000;
+        }
+        else if(tState == +1){
+            move.setTerminal();
+            return +1000;
+        }
         
         n--;
         peble = swapColor(peble);
         
-        if(n<0)
+        if(n<1)
             return move.score(whiteFactor,blackFactor);
         PossibleMove[] nextMoves = getOrderedMoves(move.board, peble);
         PossibleMove bestMove = nextMoves[0];
@@ -314,18 +332,27 @@ class MyPlayer extends GomokuPlayer {
         if(estimatedTime > 9500){
             return move.score(whiteFactor,blackFactor);
         }
-        int tState = isTerminalState(move);
-        if(tState == -2)
+        int tState = isTerminalState(move,peble);
+        if(tState == -2){
+            move.setTerminal();
             return Integer.MIN_VALUE;
-        else if(tState == +2)
+        }
+        else if(tState == +2){
+            move.setTerminal();
             return Integer.MAX_VALUE;
-        else if(tState == -1)
-            return -100000;
-        else if(tState == +1)
-            return +100000;
+        }
+        else if(tState == -1){
+            move.setTerminal();
+            return -1000;
+        }
+        else if(tState == +1){
+            move.setTerminal();
+            return +1000;
+        }
         n--;
         peble = swapColor(peble);
-        if(n<0 || move.score(whiteFactor,blackFactor) == Integer.MAX_VALUE || move.score(whiteFactor,blackFactor) == Integer.MIN_VALUE)
+
+        if(n<0)
             return move.score(whiteFactor,blackFactor);        
         PossibleMove[] nextMoves = getOrderedMoves(move.board, peble);
         PossibleMove bestMove = nextMoves[0];
@@ -387,7 +414,7 @@ class MyPlayer extends GomokuPlayer {
         return sortedMoves;
     }
 
-    private int isTerminalState(PossibleMove move){
+    private int isTerminalState(PossibleMove move, Color peble){
 
         //TODO
         //get horizontal, vertical, diaganol
@@ -432,14 +459,28 @@ class MyPlayer extends GomokuPlayer {
         
         for(Color[] row: rows){
             List<Color> rowList = Arrays.asList(row);
-            if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(wOpen4)))
-                return +1;
-            if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(bOpen4)))
-                return -1;
-            if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(wWin)))
-                return +2;
-            if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(bWin)))
-                return -2;
+            if(peble.equals(white)){
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(wWin)))
+                    return +2;
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(bWin)))
+                    return -2;
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(bOpen4)))
+                    return -1;
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(wOpen4)))
+                    return +1;
+                
+            }
+            else{
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(bWin)))
+                    return -2;
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(wWin)))
+                    return +2;
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(wOpen4)))
+                    return +1;
+                if(-1!=Collections.indexOfSubList(rowList, Arrays.asList(bOpen4)))
+                    return -1;
+                
+            }
         }
         return 0;
     }
